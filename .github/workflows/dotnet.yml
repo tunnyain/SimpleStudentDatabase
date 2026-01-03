@@ -1,4 +1,4 @@
-name: Student_Database_CI_CD
+name: Student_Database
 
 on:
   push:
@@ -7,13 +7,12 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build-and-deploy:
+  build-and-publish:
     runs-on: windows-latest
 
     steps:
     # 1️⃣ Checkout code
-    - name: Checkout code
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
     # 2️⃣ Setup .NET
     - name: Setup .NET
@@ -33,10 +32,11 @@ jobs:
     - name: Test
       run: dotnet test --no-build --verbosity normal
 
-    # 6️⃣ Publish project (Windows desktop fix)
+    # 6️⃣ Publish project
     - name: Publish
       shell: pwsh
       run: |
+        # Automatically find the first .csproj in your repo
         $project = Get-ChildItem -Recurse -Filter *.csproj | Select-Object -First 1
         if (-not $project) { Write-Error "No .csproj found"; exit 1 }
         dotnet publish $project.FullName `
@@ -44,17 +44,9 @@ jobs:
           -o ./publish `
           -p:EnableWindowsTargeting=true
 
-    # 7️⃣ Upload artifact (optional for record-keeping)
-    - name: Upload artifact
+    # 7️⃣ Upload artifact (optional)
+    - name: Upload published artifact
       uses: actions/upload-artifact@v4
       with:
         name: Student_Database_Publish
         path: ./publish
-
-    # 8️⃣ Deploy to Azure Web App
-    - name: Deploy to Azure Web App
-      uses: azure/webapps-deploy@v2
-      with:
-        app-name: <YOUR-AZURE-APP-NAME>  # replace with your Azure Web App name
-        publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-        package: ./publish
