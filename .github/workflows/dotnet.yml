@@ -10,22 +10,33 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build:
-
+  build-and-publish:
     runs-on: windows-latest
 
     steps:
     - uses: actions/checkout@v4
-    - name: Setup Student_Database
+
+    - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 8.0.x
-    - name: Restore dependencies
+
+    - name: Restore
       run: dotnet restore
+
     - name: Build
-      run: dotnet build --no-restore
+      run: dotnet build Student_Database.sln -c Release --no-restore
+
     - name: Test
-      run: dotnet test --no-build --verbosity normal
+      run: dotnet test Student_Database.sln --no-build
+
     - name: Publish
-      run: dotnet publish -c Release -o ./publish
+      run: dotnet publish $(Get-ChildItem -Recurse -Filter *.csproj | Select-Object -First 1).FullName -c Release -o ./publish
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: Student_Database_Publish
+        path: ./publish
+
     
