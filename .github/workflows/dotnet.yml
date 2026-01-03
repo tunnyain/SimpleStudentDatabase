@@ -1,6 +1,3 @@
-# This workflow will build a .NET Student database project
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-net
-
 name: Student_Database
 
 on:
@@ -25,20 +22,26 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore
 
-    # BUILD SOLUTION
+    # BUILD THE SOLUTION
     - name: Build
-      run: dotnet build StudentDatabaseApp.sln -c Release --no-restore
+      run: dotnet build -c Release --no-restore
 
     - name: Test
-      run: dotnet test StudentDatabaseApp.sln --no-build --verbosity normal
+      run: dotnet test --no-build --verbosity normal
 
-    # PUBLISH PROJECT (THIS FIXES THE ERROR)
+    # FIND & PUBLISH THE PROJECT (NO HARD-CODED PATH)
     - name: Publish
-      run: dotnet publish StudentDatabaseApp/StudentDatabaseApp.csproj -c Release -o ./publish
+      shell: pwsh
+      run: |
+        $project = Get-ChildItem -Recurse -Filter *.csproj | Select-Object -First 1
+        if (-not $project) {
+          Write-Error "No .csproj file found"
+          exit 1
+        }
+        dotnet publish $project.FullName -c Release -o ./publish
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
         name: Student_Database_Publish
         path: ./publish
-
