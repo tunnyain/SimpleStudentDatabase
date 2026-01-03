@@ -1,4 +1,4 @@
-name: Student_Database
+name: Student_Database_Workflow
 
 on:
   push:
@@ -7,46 +7,49 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build-and-publish:
+  workflow-job:
     runs-on: windows-latest
 
     steps:
-    # 1️⃣ Checkout code
-    - uses: actions/checkout@v4
+    # 1️⃣ Checkout the repo
+    - name: Checkout Code
+      uses: actions/checkout@v4
 
-    # 2️⃣ Setup .NET
+    # 2️⃣ Setup .NET SDK (optional, mostly for console / library projects)
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 8.0.x
 
-    # 3️⃣ Restore dependencies
-    - name: Restore dependencies
-      run: dotnet restore
+    # 3️⃣ Restore NuGet packages
+    - name: Restore NuGet Packages
+      run: nuget restore StudentDatabaseApp.sln
 
-    # 4️⃣ Build solution
-    - name: Build
-      run: dotnet build -c Release --no-restore
-
-    # 5️⃣ Run tests
-    - name: Test
-      run: dotnet test --no-build --verbosity normal
-
-    # 6️⃣ Publish project
-    - name: Publish
+    # 4️⃣ Build solution using MSBuild
+    - name: Build Solution
       shell: pwsh
       run: |
-        # Automatically find the first .csproj in your repo
-        $project = Get-ChildItem -Recurse -Filter *.csproj | Select-Object -First 1
-        if (-not $project) { Write-Error "No .csproj found"; exit 1 }
-        dotnet publish $project.FullName `
-          -c Release `
-          -o ./publish `
-          -p:EnableWindowsTargeting=true
+        $solution = Get-ChildItem -Recurse -Filter *.sln | Select-Object -First 1
+        if (-not $solution) { Write-Error "No solution file found"; exit 1 }
+        # Use MSBuild from VS Build Tools
+        $msbuild = "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\MSBuild\Current\Bin\MSBuild.exe"
+        & $msbuild $solution.FullName /p:Configuration=Release
 
-    # 7️⃣ Upload artifact (optional)
-    - name: Upload published artifact
+    # 5️⃣ Publish project using MSBuild (handles UpdateManifest)
+    - name: Publish Project
+      shell: pwsh
+      run: |
+        $project = Get-ChildItem -Recurse -Filter *.csproj | Select-Object -First 1
+        if (-not $project) { Write-Error "No project file found"; exit 1 }
+        $msbuild = "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\MSBuild\Current\Bin\MSBuild.exe"
+        & $msbuild $project.FullName `
+          /p:Configuration=Release `
+          /p:OutDir=./publish `
+          /t:Build,Publish
+
+    # 6️⃣ Optional: Upload published artifact
+    - name: Upload Published Output
       uses: actions/upload-artifact@v4
       with:
-        name: Student_Database_Publish
+        name: StudentDatabaseApp_Publish
         path: ./publish
