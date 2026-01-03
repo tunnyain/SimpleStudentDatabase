@@ -1,4 +1,4 @@
-name: Student_Database
+name: Student_Database_CI_CD
 
 on:
   push:
@@ -7,41 +7,54 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: windows-latest
 
     steps:
+    # 1️⃣ Checkout code
     - name: Checkout code
       uses: actions/checkout@v4
 
+    # 2️⃣ Setup .NET
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 8.0.x
 
+    # 3️⃣ Restore dependencies
     - name: Restore dependencies
       run: dotnet restore
 
-    # BUILD THE SOLUTION
+    # 4️⃣ Build solution
     - name: Build
       run: dotnet build -c Release --no-restore
 
+    # 5️⃣ Run tests
     - name: Test
       run: dotnet test --no-build --verbosity normal
 
-    # FIND & PUBLISH THE PROJECT (NO HARD-CODED PATH)
+    # 6️⃣ Publish project (Windows desktop fix)
     - name: Publish
       shell: pwsh
       run: |
         $project = Get-ChildItem -Recurse -Filter *.csproj | Select-Object -First 1
-        if (-not $project) {
-          Write-Error "No .csproj file found"
-          exit 1
-        }
-        dotnet publish $project.FullName -c Release -o ./publish
+        if (-not $project) { Write-Error "No .csproj found"; exit 1 }
+        dotnet publish $project.FullName `
+          -c Release `
+          -o ./publish `
+          -p:EnableWindowsTargeting=true
 
-    - name: Upload Artifact
+    # 7️⃣ Upload artifact (optional for record-keeping)
+    - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: Student_Database_Publish
         path: ./publish
+
+    # 8️⃣ Deploy to Azure Web App
+    - name: Deploy to Azure Web App
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: <YOUR-AZURE-APP-NAME>  # replace with your Azure Web App name
+        publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+        package: ./publish
