@@ -10,28 +10,31 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build-and-publish:
+  build:
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 8.0.x
 
-    - name: Restore
+    - name: Restore dependencies
       run: dotnet restore
 
+    # BUILD SOLUTION
     - name: Build
-      run: dotnet build Student_Database.sln -c Release --no-restore
+      run: dotnet build StudentDatabaseApp.sln -c Release --no-restore
 
     - name: Test
-      run: dotnet test Student_Database.sln --no-build
+      run: dotnet test StudentDatabaseApp.sln --no-build --verbosity normal
 
+    # PUBLISH PROJECT (THIS FIXES THE ERROR)
     - name: Publish
-      run: dotnet publish $(Get-ChildItem -Recurse -Filter *.csproj | Select-Object -First 1).FullName -c Release -o ./publish
+      run: dotnet publish StudentDatabaseApp/StudentDatabaseApp.csproj -c Release -o ./publish
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
@@ -39,4 +42,3 @@ jobs:
         name: Student_Database_Publish
         path: ./publish
 
-    
