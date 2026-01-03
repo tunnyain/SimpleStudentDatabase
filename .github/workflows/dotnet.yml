@@ -10,32 +10,21 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build-and-publish:
+  build:
+
     runs-on: windows-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Setup .NET
+    - uses: actions/checkout@v4
+    - name: Setup Student_Database
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 8.0.x
-
     - name: Restore dependencies
       run: dotnet restore
-
     - name: Build
-      run: dotnet build --configuration Release --no-restore
-
+      run: dotnet build --no-restore
     - name: Test
       run: dotnet test --no-build --verbosity normal
-
     - name: Publish
-      run: dotnet publish --configuration Release --output ./publish
-
-    - name: Upload published output
-      uses: actions/upload-artifact@v4
-      with:
-        name: Student_Database_Publish
-        path: ./publish
+      run: dotnet publish Student_Database/Student_Database.csproj -c Release -o ./publish
