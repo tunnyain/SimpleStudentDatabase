@@ -7,49 +7,46 @@ on:
     branches: [ "main" ]
 
 jobs:
-  workflow-job:
+  student-database:
     runs-on: windows-latest
 
     steps:
-    # 1️⃣ Checkout the repo
-    - name: Checkout Code
+    # 1️⃣ Checkout repo
+    - name: Checkout source
       uses: actions/checkout@v4
 
-    # 2️⃣ Setup .NET SDK (optional, mostly for console / library projects)
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 8.0.x
+    # 2️⃣ Restore NuGet (solution-level)
+    - name: Restore NuGet packages
+      shell: pwsh
+      run: |
+        nuget restore
 
-    # 3️⃣ Restore NuGet packages
-    - name: Restore NuGet Packages
-      run: nuget restore StudentDatabaseApp.sln
-
-    # 4️⃣ Build solution using MSBuild
-    - name: Build Solution
+    # 3️⃣ Build using FULL MSBuild (not dotnet build)
+    - name: Build application
       shell: pwsh
       run: |
         $solution = Get-ChildItem -Recurse -Filter *.sln | Select-Object -First 1
         if (-not $solution) { Write-Error "No solution file found"; exit 1 }
-        # Use MSBuild from VS Build Tools
+
         $msbuild = "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\MSBuild\Current\Bin\MSBuild.exe"
         & $msbuild $solution.FullName /p:Configuration=Release
 
-    # 5️⃣ Publish project using MSBuild (handles UpdateManifest)
-    - name: Publish Project
+    # 4️⃣ Publish using FULL MSBuild (THIS FIXES UpdateManifest)
+    - name: Publish application
       shell: pwsh
       run: |
         $project = Get-ChildItem -Recurse -Filter *.csproj | Select-Object -First 1
         if (-not $project) { Write-Error "No project file found"; exit 1 }
+
         $msbuild = "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\MSBuild\Current\Bin\MSBuild.exe"
         & $msbuild $project.FullName `
           /p:Configuration=Release `
-          /p:OutDir=./publish `
-          /t:Build,Publish
+          /p:OutDir=${{ github.workspace }}\publish\ `
+          /t:Build
 
-    # 6️⃣ Optional: Upload published artifact
-    - name: Upload Published Output
+    # 5️⃣ Upload published output
+    - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: StudentDatabaseApp_Publish
-        path: ./publish
+        name: StudentDatabaseApp
+        path: publish
